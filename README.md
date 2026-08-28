@@ -137,7 +137,18 @@ Ces plateformes ne gardent pas de WebSocket persistant ni d'état en mémoire en
 il faudrait alors ajouter Redis + un service temps réel, ce qui va à l'encontre de la simplicité
 demandée. (Vercel propose des « fluid/long-running compute », mais ce n'est pas la cible ici.)
 
-Sur une plateforme d'hébergement :
+### Render (le plus simple)
+
+Un fichier `render.yaml` est fourni : sur [render.com](https://render.com),
+**New > Blueprint > choisir ce dépôt**, et c'est déployé. Rien d'autre à configurer.
+
+> ⚠️ Le plan gratuit de Render met le service en veille après ~15 minutes sans trafic,
+> et le réveil prend ~50 secondes. Ouvrez l'écran hôte quelques minutes avant de commencer,
+> et **créez la partie seulement une fois la page chargée** : une mise en veille redémarre
+> le process et efface les parties en cours. Pendant le jeu, les 20 téléphones connectés
+> génèrent assez de trafic pour qu'aucune veille ne se déclenche.
+
+Sur une autre plateforme (Railway, Fly.io, Koyeb, VPS) :
 
 ```
 Build command : npm install && npm run build

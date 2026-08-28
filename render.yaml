@@ -1,0 +1,13 @@
+# Déploiement en un clic sur Render (https://render.com) :
+# New > Blueprint > choisir ce dépôt. Render lit ce fichier et fait le reste.
+services:
+  - type: web
+    name: qui-est-la-plus
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
