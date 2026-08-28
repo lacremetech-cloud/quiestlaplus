@@ -477,7 +477,7 @@ input[type='text']:focus {
   font-size: clamp(9rem, 30vw, 26rem);
   line-height: 1;
   color: var(--raspberry);
-  animation: count-pop 1s ease-out both;
+  animation: count-pop 0.55s ease-out both;
 }
 
 /* resultat */

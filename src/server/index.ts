@@ -6,6 +6,7 @@ import express from 'express';
 import { Server } from 'socket.io';
 import QRCode from 'qrcode';
 import { Room } from './game.ts';
+import { COUNTDOWN_MS } from '../shared/config.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // dist/server/index.js -> racine du projet
@@ -13,7 +14,6 @@ const ROOT = path.resolve(__dirname, '../..');
 const PUBLIC_DIR = path.join(ROOT, 'public');
 
 const PORT = Number(process.env.PORT ?? 3000);
-const COUNTDOWN_MS = 3200;
 const ROOM_TTL_MS = 8 * 60 * 60 * 1000;
 
 const app = express();

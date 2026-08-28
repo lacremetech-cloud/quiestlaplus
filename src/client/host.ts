@@ -1,5 +1,6 @@
 import { byId, clear, confetti, el } from './dom.ts';
 import { connectSocket } from './io.ts';
+import { COUNTDOWN_STEP_MS, COUNTDOWN_STEPS } from '../shared/config.ts';
 import type { HostState, PodiumRow, RosterEntry } from '../shared/types.ts';
 
 const params = new URLSearchParams(window.location.search);
@@ -265,7 +266,7 @@ function renderQuestion(s: HostState): void {
 
 function renderCountdown(): void {
   const wrap = el('div', 'countdown');
-  const number = el('div', 'countdown__number', '3');
+  const number = el('div', 'countdown__number', String(COUNTDOWN_STEPS));
   wrap.appendChild(number);
   bodyEl.appendChild(wrap);
 
@@ -275,10 +276,13 @@ function renderCountdown(): void {
     void number.offsetWidth;
     number.style.animation = '';
   };
-  countdownTimers = [
-    window.setTimeout(() => show('2'), 1000),
-    window.setTimeout(() => show('1'), 2000),
-  ];
+  countdownTimers = [];
+  for (let step = 1; step < COUNTDOWN_STEPS; step++) {
+    const value = String(COUNTDOWN_STEPS - step);
+    countdownTimers.push(
+      window.setTimeout(() => show(value), step * COUNTDOWN_STEP_MS),
+    );
+  }
 }
 
 function clearCountdownTimers(): void {
