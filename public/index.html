@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Qui est la plus ?</title>
+    <meta name="theme-color" content="#fdf7f4" />
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💗</text></svg>" />
+  </head>
+  <body>
+    <main class="landing">
+      <section class="card landing__inner">
+        <p class="eyebrow">Soirée entre copines</p>
+        <h1>Qui est la plus&nbsp;?</h1>
+        <p class="muted">
+          Le jeu de vote à projeter sur grand écran.<br />
+          Tout le monde vote depuis son téléphone.
+        </p>
+        <button class="btn btn--big" id="create">CRÉER UNE PARTIE 💗</button>
+        <div class="landing__join">
+          <input type="text" id="code" placeholder="CODE" maxlength="4" autocomplete="off" autocapitalize="characters" size="6" />
+          <button class="btn btn--ghost" id="join">Rejoindre</button>
+        </div>
+        <p class="error-line" id="error"></p>
+      </section>
+    </main>
+    <script src="/js/landing.js"></script>
+  </body>
+</html>

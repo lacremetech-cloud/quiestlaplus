@@ -1,0 +1,37 @@
+{
+  "name": "qui-est-la-plus",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Qui est la plus ? — jeu de soiree multijoueur (ecran projete + telephones)",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build:client": "esbuild src/client/landing.ts src/client/host.ts src/client/player.ts --bundle --format=iife --target=es2019 --minify --outdir=public/js",
+    "build:server": "tsc -p tsconfig.build.json",
+    "build": "npm run build:server && npm run build:client",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --test --experimental-strip-types test/*.test.ts",
+    "dev": "node --watch --experimental-strip-types src/server/index.ts",
+    "start": "node dist/server/index.js",
+    "verify": "npm run lint && npm run typecheck && npm run build && npm test"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.2",
+    "@types/qrcode": "^1.5.5",
+    "esbuild": "^0.24.2",
+    "eslint": "^9.17.0",
+    "socket.io-client": "^4.8.1",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.2"
+  }
+}
