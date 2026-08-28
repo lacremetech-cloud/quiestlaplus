@@ -90,8 +90,7 @@ test('on ne peut pas voter pour soi-même', () => {
         break;
       }
     }
-    room.beginReveal();
-    room.finishReveal();
+    room.revealResult();
     room.nextQuestion();
   }
   assert.ok(checked, 'aucune participante ne s’est vue proposer son propre prénom');
@@ -124,11 +123,8 @@ test('les résultats restent cachés jusqu’à la révélation', () => {
   assert.equal(room.hostState().result, null);
   assert.equal(room.playerState('device-0').result, null);
 
-  room.beginReveal();
-  assert.equal(room.getPhase(), 'countdown');
-  assert.equal(room.hostState().result, null);
-
-  room.finishReveal();
+  // La revelation est immediate : plus de decompte entre deux questions.
+  room.revealResult();
   assert.equal(room.getPhase(), 'result');
   assert.ok(room.hostState().result);
 });
@@ -159,13 +155,17 @@ test('une partie complète produit des statistiques finales cohérentes', () => 
       const target = choices.find((c) => c.id !== me.id)!;
       if (room.vote(`device-${i}`, target.id).ok) totalCast++;
     }
-    room.beginReveal();
-    room.finishReveal();
+    room.revealResult();
     const result = room.hostState().result!;
     assert.ok(result.winners.length >= 1);
     assert.ok(result.comment.length > 0);
     room.nextQuestion();
   }
+
+  // Apres la derniere question : le 3-2-1 du grand final, puis les stats.
+  assert.equal(room.getPhase(), 'countdown');
+  assert.equal(room.hostState().finalStats, null);
+  room.completeFinale();
 
   assert.equal(room.getPhase(), 'finished');
   const stats = room.hostState().finalStats!;
@@ -174,6 +174,30 @@ test('une partie complète produit des statistiques finales cohérentes', () => 
   assert.ok(stats.queens.length >= 1);
   assert.ok(stats.mostCited.length >= 1);
   assert.ok(stats.closingLine.length > 0);
+});
+
+test('le décompte 3-2-1 est réservé à la fin de partie', () => {
+  const room = makeRoom();
+  fillRoom(room, 6);
+  room.start();
+
+  // Sur une question normale, RÉVÉLER affiche le résultat immédiatement.
+  const choices = room.hostState().choices;
+  for (let i = 0; i < 6; i++) {
+    const me = room.participantOf(`device-${i}`)!;
+    room.vote(`device-${i}`, choices.find((c) => c.id !== me.id)!.id);
+  }
+  assert.equal(room.revealResult(), true);
+  assert.equal(room.getPhase(), 'result');
+  assert.ok(room.hostState().result);
+
+  // Seule la fin de partie passe par le décompte.
+  assert.equal(room.beginFinale(), true);
+  assert.equal(room.getPhase(), 'countdown');
+  assert.equal(room.hostState().finalStats, null);
+  assert.equal(room.completeFinale(), true);
+  assert.equal(room.getPhase(), 'finished');
+  assert.ok(room.hostState().finalStats);
 });
 
 test('les styles de questions sont mélangés', () => {
@@ -195,7 +219,6 @@ test('l’état de l’hôte ne révèle jamais qui a voté pour qui', () => {
   room.start();
   const snapshot = JSON.stringify(room.hostState());
   assert.ok(!snapshot.includes('device-'));
-  room.beginReveal();
-  room.finishReveal();
+  room.revealResult();
   assert.ok(!JSON.stringify(room.hostState()).includes('device-'));
 });

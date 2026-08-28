@@ -211,12 +211,16 @@ test('partie complète avec 20 téléphones', async () => {
   assert.equal(revote.ok, false);
   first.socket = reconnected;
 
-  // --- revelation --------------------------------------------------------
-  const countdown = waitFor<HostState>(host, 'host:state', (s) => s.phase === 'countdown');
+  // --- revelation : immediate, sans decompte ------------------------------
+  let sawCountdown = false;
+  const watchCountdown = (state: HostState): void => {
+    if (state.phase === 'countdown') sawCountdown = true;
+  };
+  host.on('host:state', watchCountdown);
   const revealed = waitFor<HostState>(host, 'host:state', (s) => s.phase === 'result');
   host.emit('host:reveal');
-  await countdown;
   const result = await revealed;
+  assert.equal(sawCountdown, false, 'aucun décompte entre deux questions');
   assert.ok(result.result);
   assert.equal(result.result!.totalVotes, 20);
   assert.ok(result.result!.winners.length >= 1);
@@ -241,10 +245,14 @@ test('partie complète avec 20 téléphones', async () => {
   );
   assert.equal(playerNext.myVote, null);
 
-  // --- fin de partie -------------------------------------------------------
+  // --- fin de partie : la seule etape qui passe par le decompte 3-2-1 -------
+  const finalCountdown = waitFor<HostState>(host, 'host:state', (s) => s.phase === 'countdown');
   const finished = waitFor<HostState>(host, 'host:state', (s) => s.phase === 'finished');
   host.emit('host:finish');
+  const counting = await finalCountdown;
+  assert.equal(counting.finalStats, null, 'les stats restent cachées pendant le décompte');
   const end = await finished;
+  host.off('host:state', watchCountdown);
   assert.ok(end.finalStats);
   assert.equal(end.finalStats!.questionsPlayed, 1);
   assert.equal(end.finalStats!.totalVotes, 20);

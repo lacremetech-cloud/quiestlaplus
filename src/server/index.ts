@@ -202,23 +202,30 @@ io.on('connection', (socket) => {
     if (entry.room.reopenVotes()) broadcastAll(code);
   }));
 
-  socket.on('host:reveal', withHost((entry, code) => {
-    if (!entry.room.beginReveal()) return;
-    broadcastAll(code);
+  /** Le decompte n'existe plus qu'a la fin de partie. */
+  const scheduleFinale = (entry: RoomEntry, code: string): void => {
+    if (entry.room.getPhase() !== 'countdown') return;
     if (entry.countdown) clearTimeout(entry.countdown);
     entry.countdown = setTimeout(() => {
       entry.countdown = undefined;
-      if (entry.room.finishReveal()) broadcastAll(code);
+      if (entry.room.completeFinale()) broadcastAll(code);
     }, COUNTDOWN_MS);
+  };
+
+  socket.on('host:reveal', withHost((entry, code) => {
+    if (entry.room.revealResult()) broadcastAll(code);
   }));
 
   socket.on('host:next', withHost((entry, code) => {
-    if (entry.room.nextQuestion()) broadcastAll(code);
+    if (!entry.room.nextQuestion()) return;
+    broadcastAll(code);
+    scheduleFinale(entry, code);
   }));
 
   socket.on('host:finish', withHost((entry, code) => {
-    entry.room.finish();
+    if (!entry.room.beginFinale()) return;
     broadcastAll(code);
+    scheduleFinale(entry, code);
   }));
 
   socket.on('player:claim', (payload: { participantId?: string }, ack?: (r: unknown) => void) => {

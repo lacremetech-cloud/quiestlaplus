@@ -266,6 +266,7 @@ function renderQuestion(s: HostState): void {
 
 function renderCountdown(): void {
   const wrap = el('div', 'countdown');
+  wrap.appendChild(el('p', 'eyebrow', 'Résultats de la soirée'));
   const number = el('div', 'countdown__number', String(COUNTDOWN_STEPS));
   wrap.appendChild(number);
   bodyEl.appendChild(wrap);
@@ -328,6 +329,16 @@ function renderResult(s: HostState): void {
   if (result.strengthLine) comment.appendChild(el('div', 'comment__strength', result.strengthLine));
   comment.appendChild(el('div', 'comment__text', result.comment));
   wrap.appendChild(comment);
+
+  // Repere pour l'hote : moment ou tout le monde a ete proposee autant de fois.
+  if (s.balanced) {
+    const badge = el(
+      'p',
+      'balance-note',
+      `✓ Tout le monde est passé ${s.appearancesEach} fois — bon moment pour s'arrêter`,
+    );
+    wrap.appendChild(badge);
+  }
 
   bodyEl.appendChild(wrap);
 

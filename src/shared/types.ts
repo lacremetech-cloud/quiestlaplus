@@ -92,6 +92,13 @@ export interface HostState {
   expectedVoters: number;
   result: RoundResult | null;
   finalStats: FinalStats | null;
+  /**
+   * true quand toutes les participantes ont ete proposees exactement le meme
+   * nombre de fois : c'est le bon moment pour arreter la partie.
+   */
+  balanced: boolean;
+  /** Nombre d'apparitions de chacune quand `balanced` est vrai. */
+  appearancesEach: number;
 }
 
 /** Snapshot envoye a un telephone. */

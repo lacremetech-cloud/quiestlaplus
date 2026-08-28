@@ -570,6 +570,15 @@ input[type='text']:focus {
   line-height: 1.25;
 }
 
+.balance-note {
+  margin: clamp(0.7rem, 1.8vh, 1.2rem) auto 0;
+  font-size: clamp(0.85rem, 1.1vw, 1.05rem);
+  font-weight: 600;
+  color: var(--ink-soft);
+  opacity: 0.75;
+  animation: reveal-up 0.5s ease 1.1s both;
+}
+
 /* ecran final */
 
 .final {

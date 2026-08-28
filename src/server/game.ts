@@ -240,8 +240,7 @@ export class Room {
   nextQuestion(): boolean {
     if (this.phase === 'finished') return false;
     if (this.questionIndex + 1 >= this.order.length) {
-      this.finish();
-      return true;
+      return this.beginFinale();
     }
     this.questionIndex++;
     this.choices = this.rotation.pick(this.roster);
@@ -266,17 +265,12 @@ export class Room {
     return true;
   }
 
-  /** Lance le decompte 3-2-1. Le resultat n'est calcule qu'a la fin. */
-  beginReveal(): boolean {
+  /**
+   * Revele le resultat immediatement : entre deux questions le decompte
+   * casserait le rythme. Le 3-2-1 est reserve a la fin de partie.
+   */
+  revealResult(): boolean {
     if (this.phase !== 'voting' && this.phase !== 'locked') return false;
-    this.phase = 'countdown';
-    this.touch();
-    return true;
-  }
-
-  /** Fin du decompte : on calcule et on affiche le resultat. */
-  finishReveal(): boolean {
-    if (this.phase !== 'countdown') return false;
     const question = this.currentQuestion();
     if (!question) return false;
 
@@ -314,10 +308,21 @@ export class Room {
     return true;
   }
 
-  finish(): void {
+  /** Lance le decompte 3-2-1 du grand final (une seule fois par partie). */
+  beginFinale(): boolean {
+    if (this.phase === 'finished' || this.phase === 'countdown') return false;
+    this.phase = 'countdown';
+    this.touch();
+    return true;
+  }
+
+  /** Fin du decompte final : on devoile les statistiques de la soiree. */
+  completeFinale(): boolean {
+    if (this.phase !== 'countdown') return false;
     this.phase = 'finished';
     this.finalStats = this.computeFinalStats();
     this.touch();
+    return true;
   }
 
   /** Un telephone vote. Un seul vote par participante et par question. */
@@ -383,6 +388,7 @@ export class Room {
 
   hostState(): HostState {
     const question = this.currentQuestion();
+    const spread = this.rotation.appearanceSpread(this.roster);
     return {
       code: this.code,
       joinUrl: this.joinUrl,
@@ -408,6 +414,8 @@ export class Room {
       expectedVoters: this.expectedVoters(),
       result: this.phase === 'result' ? this.result : null,
       finalStats: this.finalStats,
+      balanced: spread.min > 0 && spread.min === spread.max,
+      appearancesEach: spread.min,
     };
   }
 
