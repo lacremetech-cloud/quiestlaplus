@@ -23,26 +23,62 @@ async function waitForServer(): Promise<void> {
   throw new Error('le serveur ne démarre pas');
 }
 
-/** Attend le prochain evenement satisfaisant le predicat. */
-function waitFor<T>(
-  socket: Socket,
-  event: string,
-  predicate: (payload: T) => boolean,
-  label = event,
-): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      socket.off(event, handler);
-      reject(new Error(`timeout: ${label}`));
-    }, 8000);
-    const handler = (payload: T): void => {
-      if (!predicate(payload)) return;
-      clearTimeout(timer);
-      socket.off(event, handler);
-      resolve(payload);
-    };
-    socket.on(event, handler);
+/**
+ * Suit le dernier etat recu sur un evenement.
+ *
+ * Indispensable ici : le serveur envoie l'etat juste apres l'accuse de
+ * reception de la connexion. Un simple `socket.on` pose apres coup rate ce
+ * message et attend indefiniment un etat deja arrive. Le tracker garde le
+ * dernier etat connu, donc une attente deja satisfaite se resout tout de suite.
+ */
+interface Tracker<T> {
+  last: T | null;
+  wait(predicate: (payload: T) => boolean, label?: string): Promise<T>;
+}
+
+function track<T>(socket: Socket, event: string): Tracker<T> {
+  interface Waiter {
+    predicate: (payload: T) => boolean;
+    settle: (payload: T) => void;
+  }
+  const waiters: Waiter[] = [];
+
+  const tracker: Tracker<T> = {
+    last: null,
+    wait(predicate, label = event) {
+      if (tracker.last !== null && predicate(tracker.last)) {
+        return Promise.resolve(tracker.last);
+      }
+      return new Promise<T>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          const index = waiters.indexOf(waiter);
+          if (index >= 0) waiters.splice(index, 1);
+          reject(new Error(`timeout: ${label}`));
+        }, 8000);
+        const waiter: Waiter = {
+          predicate,
+          settle: (payload) => {
+            clearTimeout(timer);
+            resolve(payload);
+          },
+        };
+        waiters.push(waiter);
+      });
+    },
+  };
+
+  socket.on(event, (payload: T) => {
+    tracker.last = payload;
+    for (let i = waiters.length - 1; i >= 0; i--) {
+      const waiter = waiters[i] as Waiter;
+      if (waiter.predicate(payload)) {
+        waiters.splice(i, 1);
+        waiter.settle(payload);
+      }
+    }
   });
+
+  return tracker;
 }
 
 function connected(socket: Socket): Promise<void> {
@@ -78,6 +114,7 @@ test('partie complète avec 20 téléphones', async () => {
   assert.match(created.joinUrl, /\/j\/[A-Z0-9]{4}$/);
 
   const host = io(BASE, { transports: ['websocket'] });
+  const hostState = track<HostState>(host, 'host:state');
   await connected(host);
   const joined = await emitAck<{ ok: boolean }>(host, 'host:join', {
     code: created.code,
@@ -96,15 +133,22 @@ test('partie complète avec 20 téléphones', async () => {
   intruder.close();
 
   const names = Array.from({ length: 20 }, (_, i) => `Joueuse${i + 1}`);
-  const rosterReady = waitFor<HostState>(host, 'host:state', (s) => s.roster.length === 20);
+  const rosterReady = hostState.wait((s) => s.roster.length === 20);
   host.emit('host:setNames', { names });
   const lobby = await rosterReady;
   assert.equal(lobby.phase, 'lobby');
 
   // --- 20 telephones rejoignent et reservent un prenom -------------------
-  const players: { socket: Socket; deviceId: string; name: string }[] = [];
+  const players: {
+    socket: Socket;
+    deviceId: string;
+    name: string;
+    state: Tracker<PlayerState>;
+  }[] = [];
   for (let i = 0; i < 20; i++) {
     const socket = io(BASE, { transports: ['websocket'], forceNew: true });
+    // Le tracker est pose avant le join : aucun etat ne peut etre rate.
+    const state = track<PlayerState>(socket, 'player:state');
     await connected(socket);
     const deviceId = `device-integration-${i}-${Math.random().toString(36).slice(2)}`;
     const ack = await emitAck<{ ok: boolean }>(socket, 'player:join', {
@@ -112,12 +156,12 @@ test('partie complète avec 20 téléphones', async () => {
       deviceId,
     });
     assert.equal(ack.ok, true);
-    players.push({ socket, deviceId, name: names[i] as string });
+    players.push({ socket, deviceId, name: names[i] as string, state });
   }
 
   await Promise.all(
     players.map(async (player, index) => {
-      const state = await waitFor<PlayerState>(player.socket, 'player:state', (s) => s.me === null || s.me !== null);
+      const state = await player.state.wait(() => true, `état initial de ${player.name}`);
       const target = state.availableNames.find((n) => n.name === player.name);
       assert.ok(target, `prénom introuvable pour ${player.name}`);
       const ack = await emitAck<{ ok: boolean }>(player.socket, 'player:claim', {
@@ -127,15 +171,12 @@ test('partie complète avec 20 téléphones', async () => {
     }),
   );
 
-  const allReady = await waitFor<HostState>(
-    host,
-    'host:state',
-    (s) => s.roster.filter((r) => r.claimed).length === 20,
+  const allReady = await hostState.wait((s) => s.roster.filter((r) => r.claimed).length === 20,
   );
   assert.equal(allReady.connectedCount, 20);
 
   // --- lancement ---------------------------------------------------------
-  const votingState = waitFor<HostState>(host, 'host:state', (s) => s.phase === 'voting');
+  const votingState = hostState.wait((s) => s.phase === 'voting');
   host.emit('host:start');
   const voting = await votingState;
   assert.equal(voting.choices.length, 6);
@@ -143,7 +184,7 @@ test('partie complète avec 20 téléphones', async () => {
 
   // Chaque telephone recoit la question et les 6 memes prenoms.
   const playerStates = await Promise.all(
-    players.map((p) => waitFor<PlayerState>(p.socket, 'player:state', (s) => s.phase === 'voting')),
+    players.map((p) => p.state.wait((s) => s.phase === 'voting')),
   );
   for (const state of playerStates) {
     assert.equal(state.choices.length, 6);
@@ -152,7 +193,7 @@ test('partie complète avec 20 téléphones', async () => {
   }
 
   // --- votes simultanes --------------------------------------------------
-  const allVoted = waitFor<HostState>(host, 'host:state', (s) => s.votesReceived === 20);
+  const allVoted = hostState.wait((s) => s.votesReceived === 20);
   await Promise.all(
     players.map(async (player, index) => {
       const state = playerStates[index] as PlayerState;
@@ -199,8 +240,9 @@ test('partie complète avec 20 téléphones', async () => {
   first.socket.close();
   await delay(150);
   const reconnected = io(BASE, { transports: ['websocket'], forceNew: true });
+  const rejoined = track<PlayerState>(reconnected, 'player:state');
   await connected(reconnected);
-  const rejoinState = waitFor<PlayerState>(reconnected, 'player:state', () => true);
+  const rejoinState = rejoined.wait(() => true);
   await emitAck(reconnected, 'player:join', { code: created.code, deviceId: first.deviceId });
   const restored = await rejoinState;
   assert.equal(restored.me?.name, first.name);
@@ -217,7 +259,7 @@ test('partie complète avec 20 téléphones', async () => {
     if (state.phase === 'countdown') sawCountdown = true;
   };
   host.on('host:state', watchCountdown);
-  const revealed = waitFor<HostState>(host, 'host:state', (s) => s.phase === 'result');
+  const revealed = hostState.wait((s) => s.phase === 'result');
   host.emit('host:reveal');
   const result = await revealed;
   assert.equal(sawCountdown, false, 'aucun décompte entre deux questions');
@@ -229,25 +271,20 @@ test('partie complète avec 20 téléphones', async () => {
   assert.ok(!JSON.stringify(result).includes('device-integration'));
 
   // --- question suivante --------------------------------------------------
-  const nextQuestion = waitFor<HostState>(
-    host,
-    'host:state',
-    (s) => s.phase === 'voting' && s.questionIndex === 1,
+  const nextQuestion = hostState.wait((s) => s.phase === 'voting' && s.questionIndex === 1,
   );
   host.emit('host:next');
   const second2 = await nextQuestion;
   assert.equal(second2.votesReceived, 0);
   assert.notEqual(second2.question?.id, voting.question?.id);
-  const playerNext = await waitFor<PlayerState>(
-    players[1]!.socket,
-    'player:state',
+  const playerNext = await players[1]!.state.wait(
     (s) => s.question?.id === second2.question?.id,
   );
   assert.equal(playerNext.myVote, null);
 
   // --- fin de partie : la seule etape qui passe par le decompte 3-2-1 -------
-  const finalCountdown = waitFor<HostState>(host, 'host:state', (s) => s.phase === 'countdown');
-  const finished = waitFor<HostState>(host, 'host:state', (s) => s.phase === 'finished');
+  const finalCountdown = hostState.wait((s) => s.phase === 'countdown');
+  const finished = hostState.wait((s) => s.phase === 'finished');
   host.emit('host:finish');
   const counting = await finalCountdown;
   assert.equal(counting.finalStats, null, 'les stats restent cachées pendant le décompte');

@@ -233,6 +233,10 @@ function renderLobby(s: HostState): void {
   players.id = 'players';
   right.appendChild(players);
 
+  const warning = el('p', 'lobby-warning');
+  warning.id = 'lobby-warning';
+  right.appendChild(warning);
+
   wrap.append(left, right);
   bodyEl.appendChild(wrap);
 }
@@ -426,6 +430,19 @@ function updateLobby(s: HostState): void {
     ready === 0
       ? 'En attente des premières joueuses…'
       : `${ready} joueuse${ready > 1 ? 's' : ''} prête${ready > 1 ? 's' : ''}`;
+
+  // Les prenoms non reclames restent proposes au vote : on previent l'hote
+  // avant qu'il lance la partie, c'est le seul moment ou c'est corrigeable.
+  const missing = s.roster.filter((r) => !r.claimed);
+  const warning = document.getElementById('lobby-warning');
+  if (warning) {
+    warning.textContent =
+      missing.length === 0
+        ? ''
+        : `⚠️ ${missing.length} prénom${missing.length > 1 ? 's' : ''} n'${missing.length > 1 ? 'ont' : 'a'} pas rejoint (${missing
+            .map((m) => m.name)
+            .join(', ')}). ${missing.length > 1 ? 'Elles seront' : 'Elle sera'} quand même proposé${missing.length > 1 ? 'es' : 'e'} au vote — retire-${missing.length > 1 ? 'les' : 'la'} si ${missing.length > 1 ? 'elles ne viennent' : 'elle ne vient'} pas.`;
+  }
 
   const arrivals = s.roster.filter((r) => r.claimed);
   for (const entry of arrivals) {

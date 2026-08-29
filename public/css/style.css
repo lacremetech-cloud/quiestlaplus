@@ -370,6 +370,20 @@ input[type='text']:focus {
   box-shadow: none;
 }
 
+.lobby-warning {
+  margin: 1rem 0 0;
+  max-width: 46ch;
+  font-size: clamp(0.85rem, 1.05vw, 1.05rem);
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--raspberry-deep);
+  opacity: 0.9;
+}
+
+.lobby-warning:empty {
+  display: none;
+}
+
 .counter {
   font-size: clamp(1.3rem, 2.2vw, 2rem);
   font-weight: 700;
