@@ -376,14 +376,15 @@ input[type='text']:focus {
   margin-bottom: 1.2rem;
 }
 
+/* A gauche : la colonne de droite affiche les pastilles des joueuses. */
 .toast-feed {
   position: fixed;
-  right: 2.4vw;
+  left: 2.4vw;
   bottom: 3vh;
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
-  align-items: flex-end;
+  align-items: flex-start;
   pointer-events: none;
   z-index: 40;
 }
@@ -789,7 +790,7 @@ input[type='text']:focus {
 @keyframes slide-in {
   from {
     opacity: 0;
-    transform: translateX(40px);
+    transform: translateX(-40px);
   }
   to {
     opacity: 1;
@@ -800,7 +801,7 @@ input[type='text']:focus {
 @keyframes fade-out {
   to {
     opacity: 0;
-    transform: translateX(30px);
+    transform: translateX(-30px);
   }
 }
 

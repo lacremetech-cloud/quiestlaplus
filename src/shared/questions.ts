@@ -361,24 +361,28 @@ export const QUESTIONS: Question[] = [
   },
 ];
 
-/** Prenoms de demonstration, modifiables par l'hote avant la partie. */
+/**
+ * Liste des participantes preremplie dans le lobby.
+ * L'hote peut toujours modifier, supprimer ou ajouter des prenoms avant
+ * de lancer la partie (bouton « Modifier les prenoms »).
+ */
 export const DEMO_NAMES: string[] = [
-  'Inès',
-  'Lina',
-  'Sarah',
+  'Joud',
+  'Elaf',
+  'Firdaws',
   'Nour',
-  'Jade',
-  'Maya',
-  'Yasmine',
-  'Sofia',
-  'Imane',
-  'Aya',
-  'Kenza',
-  'Léa',
-  'Manel',
-  'Amel',
+  'Manale',
+  'Alia',
+  'Noha',
+  'Chayma',
+  'Lana',
+  'Dana',
+  'Sarah El Adarissi',
+  'Maryam',
   'Selma',
-  'Myriam',
-  'Lyna',
-  'Assia',
+  'Jinane',
+  'Asma',
+  'Dania Jebbour',
+  'Dania Agde',
+  'Leila',
 ];
